@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import Filters from "./components/Filters";
 import Charts from "./components/Charts";
@@ -17,46 +17,66 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [products, setProducts] = useState<any[]>([]);
-  const [categoryChartOptions, setCategoryChartOptions] = useState({});
-  const [productChartOptions, setProductChartOptions] = useState({});
   const [chartData, setChartData] = useState<{ name: string; price: number }[]>(
     []
   );
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    axios.get("https://dummyjson.com/products/categories").then((response) => {
-      setCategories(response.data);
-      setCategoryChartOptions({
-        chart: { type: "pie" },
-        title: { text: "All Categories" },
-        series: [
-          {
-            name: "Products",
-            data: response.data.map((category: Category) => ({
-              name: category.name,
-              y: 1,
-            })),
-          },
-        ],
-      });
-    });
+    const fetchCategories = async () => {
+      try {
+        const { data } = await axios.get(
+          "https://dummyjson.com/products/categories"
+        );
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      }
+    };
+    fetchCategories();
   }, []);
 
   useEffect(() => {
     if (selectedCategory) {
-      setLoading(true);
-      axios
-        .get(`https://dummyjson.com/products/category/${selectedCategory}`)
-        .then((response) => {
-          setProducts(response.data.products);
+      const fetchProducts = async () => {
+        setLoading(true);
+        try {
+          const { data } = await axios.get(
+            `https://dummyjson.com/products/category/${selectedCategory}`
+          );
+          setProducts(data.products);
+        } catch (error) {
+          console.error("Failed to fetch products", error);
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+
+      fetchProducts();
+    } else {
+      setProducts([]);
     }
   }, [selectedCategory]);
 
-  useEffect(() => {
-    setProductChartOptions({
+  const categoryChartOptions = useMemo(
+    () => ({
+      chart: { type: "pie" },
+      title: { text: "All Categories" },
+      series: [
+        {
+          name: "Products",
+          data: categories.map((category: Category) => ({
+            name: category.name,
+            y: 1,
+          })),
+        },
+      ],
+    }),
+    [categories]
+  );
+
+  const productChartOptions = useMemo(
+    () => ({
       chart: { type: "pie" },
       title: { text: "Products" },
       series: [
@@ -68,12 +88,12 @@ const App: React.FC = () => {
           })),
         },
       ],
-    });
-  }, [products]);
+    }),
+    [products]
+  );
 
   const handleFilterChange = (selectedProducts: string[]) => {
     if (selectedCategory) {
-      setLoading(true);
       const filteredProducts = products.length
         ? products.filter((product: any) =>
             selectedProducts.includes(product.title)
@@ -84,8 +104,6 @@ const App: React.FC = () => {
         price: product.price,
       }));
       setChartData(data);
-      setLoading(false);
-      // });
     } else {
       setChartData([]);
     }

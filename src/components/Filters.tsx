@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useState } from "react";
+import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
 import {
   Button,
   Select,
@@ -33,8 +33,29 @@ const Filters: React.FC<FiltersProps> = ({
   setProducts,
 }) => {
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
+  const [isRunReportEnabled, setIsRunReportEnabled] = useState<boolean>(false);
+  const [initialFilters, setInitialFilters] = useState<{
+    category: string;
+    products: any[];
+  }>({
+    category: "",
+    products: [],
+  });
+
+  useEffect(() => {
+    setIsRunReportEnabled(
+      selectedCategory !== initialFilters.category ||
+        selectedProducts.length !== initialFilters.products.length
+    );
+  }, [selectedCategory, selectedProducts, initialFilters]);
+
   const handleRunReport = () => {
     onFiltersChange(selectedProducts);
+    setIsRunReportEnabled(false);
+    setInitialFilters({
+      category: selectedCategory,
+      products: selectedProducts,
+    });
   };
 
   const handleClear = () => {
@@ -42,6 +63,7 @@ const Filters: React.FC<FiltersProps> = ({
     setSelectedProducts([]);
     setProducts([]);
     onFiltersChange([]);
+    setIsRunReportEnabled(false);
   };
 
   return (
@@ -88,11 +110,14 @@ const Filters: React.FC<FiltersProps> = ({
       </Box>
 
       <Box>
-        <Button onClick={handleRunReport} disabled={!selectedCategory}>
+        <Button
+          variant="contained"
+          onClick={handleRunReport}
+          disabled={!isRunReportEnabled}
+        >
           Run Report
         </Button>
       </Box>
-
     </Box>
   );
 };
